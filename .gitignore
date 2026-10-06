@@ -6,3 +6,5 @@ crash.log
 .aws/
 node_modules/
 dist/
+infra/lambda.zip
+infra/tfplan*
