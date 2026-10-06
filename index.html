@@ -48,7 +48,7 @@
     function setOffice(){const office=document.getElementById('office').value||'対象会社';document.querySelector('#target strong').textContent='対象：'+office;document.querySelector('#target small').textContent='移動手段：電車＋徒歩 ／ 通勤時間の目安';renderMap()}
     let map,geocoder,markers=[],routePolylines=[];
     function mapStatus(text){const el=document.getElementById('mapStatus');if(el)el.textContent=text}
-    async function loadGoogleMaps(){if(!config||!config.googleMapsApiKey){mapStatus('Google Maps APIキーを設定すると実地図を表示できます');return false}if(window.google&&window.google.maps)return true;return new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(config.googleMapsApiKey)+'&v=weekly&libraries=marker,routes&language=ja&region=JP&loading=async';s.async=true;s.onload=()=>resolve(true);s.onerror=reject;document.head.appendChild(s)})}
+    async function loadGoogleMaps(){if(!config||!config.googleMapsApiKey){mapStatus('Google Maps APIキーを設定すると実地図を表示できます');return false}if(window.google&&window.google.maps&&window.google.maps.importLibrary)return true;return new Promise((resolve,reject)=>{window.__propertyMapsReady=()=>resolve(true);const s=document.createElement('script');s.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(config.googleMapsApiKey)+'&v=weekly&libraries=marker,routes&language=ja&region=JP&loading=async&callback=__propertyMapsReady';s.async=true;s.onerror=reject;document.head.appendChild(s)})}
     function clearMapItems(){markers.forEach(marker=>marker.map=null);markers=[];routePolylines.forEach(line=>line.setMap(null));routePolylines=[]}
     async function renderMap(){try{if(!await loadGoogleMaps())return;const {AdvancedMarkerElement,PinElement}=await google.maps.importLibrary('marker');if(!map){map=new google.maps.Map(document.getElementById('googleMap'),{center:{lat:35.6812,lng:139.7671},zoom:12,mapId:config.googleMapsMapId||'DEMO_MAP_ID'});geocoder=new google.maps.Geocoder()}clearMapItems();const bounds=new google.maps.LatLngBounds();const addMarker=(address,label,color,index)=>new Promise(resolve=>geocoder.geocode({address},(results,status)=>{if(status==='OK'&&results[0]){const pin=new PinElement({background:color,borderColor:'#ffffff',glyphColor:'#ffffff',glyphText:label.slice(0,1)});const marker=new AdvancedMarkerElement({map,position:results[0].geometry.location,title:label,content:pin.element,gmpClickable:index>=0});if(index>=0)marker.addEventListener('gmp-click',()=>selectProperty(index));markers.push(marker);bounds.extend(results[0].geometry.location)}resolve()}));const office=document.getElementById('office').value||'東京都千代田区丸の内1-1-1';await addMarker(office,'対象会社','#d05a48',-1);for(let i=0;i<properties.length;i++){const p=properties[i];await addMarker(p.address||p.station+' 日本',p.name,'#167d74',i)}if(!bounds.isEmpty()&&selectedIndex<0)map.fitBounds(bounds);mapStatus('実際の住所・最寄駅を表示中');if(selectedIndex>=0)showRoute(properties[selectedIndex])}catch(e){console.error(e);mapStatus('地図を表示できません。Maps JavaScript API とAPIキーの制限を確認してください')}}
     function selectProperty(index){selectedIndex=index;render();showRoute(properties[index])}
@@ -96,7 +96,7 @@
         const origins=await resolveTransitPlaceOrigins(p),destination=await resolveTransitDestination(office),routeCandidates=[],transitErrors=[];
         for(const origin of origins){
           try{
-            const result=await Route.computeRoutes({origin:origin.place,destination,travelMode:'TRANSIT',departureTime:new Date(),fields:['durationMillis','distanceMeters','path','viewport','legs','localizedValues']});
+            const result=await Route.computeRoutes({origin:origin.location,destination,travelMode:'TRANSIT',departureTime:new Date(),fields:['durationMillis','distanceMeters','path','viewport','legs','localizedValues']});
             for(const route of result.routes||[])routeCandidates.push({route,origin});
           }catch(error){transitErrors.push((error&&error.status)||error.message||String(error));console.warn('Routes API transit failed',origin.query,error)}
         }
@@ -109,7 +109,7 @@
         document.getElementById('routeDetails').innerHTML='<strong>'+escapeHtml(p.name)+'</strong><br>'+escapeHtml(office)+'までの公共交通候補'+details;
       }catch(e){console.error(e);document.getElementById('routeDetails').textContent=e.message==='origin_not_found'?'物件名・住所・最寄り駅のいずれからも位置を見つけられませんでした。':'公共交通の経路取得に失敗しました。Routes APIとPlaces API（新）の設定を確認してください。'}
     }
-    async function resolveTransitDestination(query){const {Place}=await google.maps.importLibrary('places');const result=await Place.searchByText({textQuery:query,fields:['id','location','formattedAddress'],maxResultCount:1,language:'ja',region:'jp'});const place=result.places&&result.places[0];return place&&place.id?new Place({id:place.id}):query}
+    async function resolveTransitDestination(query){const {Place}=await google.maps.importLibrary('places');const result=await Place.searchByText({textQuery:query,fields:['id','location','formattedAddress'],maxResultCount:1,language:'ja',region:'jp'});const place=result.places&&result.places[0];return place&&place.location?place.location:query}
   </script>
 </body>
 </html>
