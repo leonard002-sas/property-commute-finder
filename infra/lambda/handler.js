@@ -19,6 +19,14 @@ function extractListing(html, url) {
   const title = firstMatch(decoded, /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)/i)
     || firstMatch(decoded, /<title[^>]*>([\s\S]*?)<\/title>/i);
   const plain = text(decoded);
+  if (/(^|\.)suumo\.jp$/i.test(new URL(url).hostname)) {
+    const name = firstMatch(decoded, /<title[^>]*>\s*【SUUMO】\s*([^（(／/|]+?)(?:（|\(|／|\/|\|)/i);
+    const address = firstMatch(decoded, /property_view_detail--location[\s\S]{0,1200}?property_view_detail-text[^>]*>\s*([^<]+)/i);
+    const station = firstMatch(decoded, /ekiNm1\s*:\s*"([^"]+)"/);
+    const rentYen = Number(firstMatch(decoded, /chinryo\s*:\s*"(\d+)"/));
+    const layout = firstMatch(decoded, /madoriDisp\s*:\s*"([^"]+)"/);
+    return { name, rent: rentYen ? (rentYen / 10000).toFixed(1).replace(/\.0$/, '') + '万円' : '', layout, station: station ? station + '駅' : '', address, url };
+  }
   const rent = firstMatch(plain, /([0-9]+(?:\.[0-9]+)?\s*万円)/);
   const layout = firstMatch(plain, /\b([1-9][SLDKR]{1,4})\b/i);
   const station = firstMatch(plain, /([^\s、・（）()]{1,20}駅)/);
