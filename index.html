@@ -16,7 +16,7 @@
   </style>
 </head>
 <body>
-  <header class="top"><div class="brand"><div class="mark">⌂</div><div><h1>住まいと通勤</h1><p>気になる物件を、通勤時間で比べる</p></div></div><div class="badge">個人用・URL登録版</div></header>
+  <header class="top"><div class="brand"><div class="mark">⌂</div><div><h1>住まいと通勤</h1><p>気になる物件を、通勤時間で比べる</p></div></div><button id="authButton" class="badge" onclick="signIn()">ログインして保存</button></header>
   <main>
     <section class="intro"><div><h2>引っ越し先を、<br>会社からの距離で選ぶ。</h2><p>物件サイトのURLを登録して、対象の会社までの所要時間・家賃・間取りをまとめて比較できます。</p></div><span class="badge">まずは手入力で試せます</span></section>
     <div class="layout">
@@ -27,12 +27,23 @@
       <div class="stack"><section class="card"><div class="toolbar"><h3 style="margin:0">登録した物件</h3><span id="count" class="count">3件</span></div><div id="target" class="target"><div class="pin">◎</div><div><strong>対象：東京都千代田区丸の内1-1-1</strong><small>移動手段：電車＋徒歩 ／ 通勤時間の目安</small></div></div><div id="list"></div><div class="footnote">※所要時間はデモ値です。経路API接続後、出発時刻を指定した計算に置き換えます。</div></section><section class="card"><h3>位置関係</h3><div class="map"><div class="map-label">地図プレビュー</div><div class="marker home m1"><span>1</span></div><div class="marker home m2"><span>2</span></div><div class="marker home m3"><span>3</span></div><div class="marker office mo"><span>●</span></div><div class="map-note"><strong>● 対象会社</strong>　<span style="color:#b8c9d8">● 登録物件　｜　番地非公開の物件は最寄り駅に表示します</span></div></div></section></div>
     </div>
   </main>
+  <script src="config.js"></script>
   <script>
-    const properties=[{name:'神田リバーサイド',rent:'12.5万円',layout:'1LDK',station:'神田駅',time:'18分',source:'SUUMO',url:'https://suumo.jp/'},{name:'日本橋アーバンハウス',rent:'11.8万円',layout:'1K',station:'日本橋駅',time:'24分',source:'HOME’S',url:'https://www.homes.co.jp/'},{name:'秋葉原パークレジデンス',rent:'13.2万円',layout:'2DK',station:'秋葉原駅',time:'29分',source:'CHINTAI',url:'https://www.chintai.net/'}];
-    function render(){document.getElementById('count').textContent=properties.length+'件';document.getElementById('list').innerHTML=properties.map((p,i)=>`<article class="property"><div><h4>${p.name}</h4><p><span class="tag">${p.layout}</span><span class="tag warn">${p.rent}</span></p><p>最寄り：${p.station}</p><a class="source" href="${p.url}" target="_blank" rel="noreferrer">${p.source}で詳細を見る ↗</a></div><div class="metrics"><div class="time">${p.time}</div><small>会社まで</small></div></article>`).join('')}
-    function addProperty(){const name=document.getElementById('name').value||'新しい登録物件';const rent=document.getElementById('rent').value||'未入力';const layout=document.getElementById('layout').value;const station=document.getElementById('station').value||'最寄り駅未入力';const url=document.getElementById('url').value||'#';properties.unshift({name,rent,layout,station,time:'計算待ち',source:url.includes('suumo')?'SUUMO':url.includes('homes')?'HOME’S':url.includes('chintai')?'CHINTAI':'その他',url});render();['url','name','rent','station'].forEach(id=>document.getElementById(id).value='')}
+    const demoProperties=[{name:'神田リバーサイド',rent:'12.5万円',layout:'1LDK',station:'神田駅',time:'18分',source:'SUUMO',url:'https://suumo.jp/'},{name:'日本橋アーバンハウス',rent:'11.8万円',layout:'1K',station:'日本橋駅',time:'24分',source:'HOME’S',url:'https://www.homes.co.jp/'},{name:'秋葉原パークレジデンス',rent:'13.2万円',layout:'2DK',station:'秋葉原駅',time:'29分',source:'CHINTAI',url:'https://www.chintai.net/'}];
+    let properties=[...demoProperties];
+    const config=window.APP_CONFIG;
+    const tokenKey='property-commute-id-token';
+    const getToken=()=>localStorage.getItem(tokenKey);
+    const sourceFor=url=>url.includes('suumo')?'SUUMO':url.includes('homes')?'HOME’S':url.includes('chintai')?'CHINTAI':'その他';
+    const card=p=>'<article class="property"><div><h4>'+p.name+'</h4><p><span class="tag">'+p.layout+'</span><span class="tag warn">'+p.rent+'</span></p><p>最寄り：'+p.station+'</p><a class="source" href="'+p.url+'" target="_blank" rel="noreferrer">'+p.source+'で詳細を見る ↗</a></div><div class="metrics"><div class="time">'+(p.time||'計算待ち')+'</div><small>会社まで</small></div></article>';
+    function render(){document.getElementById('count').textContent=properties.length+'件';document.getElementById('list').innerHTML=properties.length?properties.map(card).join(''):'<div class="empty">まだ物件がありません。上のフォームから登録してください。</div>'}
+    function authHeaders(){return {'content-type':'application/json','authorization':'Bearer '+getToken()}}
+    function signIn(){if(!config){alert('AWS接続前のローカルデモです。');return}if(getToken()){localStorage.removeItem(tokenKey);location.replace(location.origin+location.pathname);return}const q=new URLSearchParams({client_id:config.clientId,response_type:'code',scope:'openid email profile',redirect_uri:location.origin+location.pathname});location.href=config.cognitoDomain+'/login?'+q}
+    async function exchangeCode(){const code=new URLSearchParams(location.search).get('code');if(!code||!config)return;const body=new URLSearchParams({grant_type:'authorization_code',client_id:config.clientId,code,redirect_uri:location.origin+location.pathname});const r=await fetch(config.cognitoDomain+'/oauth2/token',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body});if(!r.ok)throw new Error('ログイン情報の取得に失敗しました');const tokens=await r.json();localStorage.setItem(tokenKey,tokens.id_token);history.replaceState({},'',location.pathname)}
+    async function loadProperties(){if(!config||!getToken())return;const r=await fetch(config.apiBaseUrl,{headers:authHeaders()});if(!r.ok)throw new Error('保存済み物件の読み込みに失敗しました');properties=await r.json();render()}
+    async function addProperty(){let p={name:document.getElementById('name').value||'新しい登録物件',rent:document.getElementById('rent').value||'未入力',layout:document.getElementById('layout').value,station:document.getElementById('station').value||'最寄り駅未入力',url:document.getElementById('url').value||'#'};p.time='計算待ち';p.source=sourceFor(p.url);if(config&&getToken()){const r=await fetch(config.apiBaseUrl,{method:'POST',headers:authHeaders(),body:JSON.stringify(p)});if(!r.ok){alert('保存に失敗しました。再ログインしてください。');return}p=await r.json()}properties.unshift(p);render();['url','name','rent','station'].forEach(id=>document.getElementById(id).value='')}
     function setOffice(){const office=document.getElementById('office').value||'対象会社';document.querySelector('#target strong').textContent='対象：'+office;document.querySelector('#target small').textContent='移動手段：電車＋徒歩 ／ 通勤時間の目安';alert('対象会社を更新しました。経路API接続後、所要時間も再計算されます。')}
-    render();
+    (async()=>{try{await exchangeCode();if(getToken()){document.getElementById('authButton').textContent='ログアウト';await loadProperties()}render()}catch(e){console.error(e);alert(e.message);render()}})();
   </script>
 </body>
 </html>

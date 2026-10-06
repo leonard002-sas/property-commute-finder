@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 resource "aws_s3_bucket" "site" {
   bucket_prefix = "${var.project_name}-site-"
 }
@@ -118,11 +120,21 @@ resource "aws_cognito_user_pool" "users" {
 }
 
 resource "aws_cognito_user_pool_client" "web" {
-  name                         = "${var.project_name}-web"
-  user_pool_id                 = aws_cognito_user_pool.users.id
-  generate_secret              = false
-  explicit_auth_flows          = ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
-  supported_identity_providers = ["COGNITO"]
+  name                                 = "${var.project_name}-web"
+  user_pool_id                         = aws_cognito_user_pool.users.id
+  generate_secret                      = false
+  explicit_auth_flows                  = ["ALLOW_USER_SRP_AUTH", "ALLOW_REFRESH_TOKEN_AUTH"]
+  supported_identity_providers         = ["COGNITO"]
+  allowed_oauth_flows_user_pool_client = true
+  allowed_oauth_flows                  = ["code"]
+  allowed_oauth_scopes                 = ["openid", "email", "profile"]
+  callback_urls                        = ["https://${aws_cloudfront_distribution.site.domain_name}/"]
+  logout_urls                          = ["https://${aws_cloudfront_distribution.site.domain_name}/"]
+}
+
+resource "aws_cognito_user_pool_domain" "web" {
+  domain       = "${var.project_name}-${data.aws_caller_identity.current.account_id}"
+  user_pool_id = aws_cognito_user_pool.users.id
 }
 
 data "archive_file" "api" {
@@ -238,4 +250,17 @@ output "site_bucket" {
 
 output "site_url" {
   value = "https://${aws_cloudfront_distribution.site.domain_name}"
+}
+
+resource "aws_s3_object" "app_config" {
+  bucket       = aws_s3_bucket.site.id
+  key          = "config.js"
+  content_type = "application/javascript"
+  content      = <<-CONFIG
+    window.APP_CONFIG = {
+      cognitoDomain: "https://${aws_cognito_user_pool_domain.web.domain}.auth.${var.aws_region}.amazoncognito.com",
+      clientId: "${aws_cognito_user_pool_client.web.id}",
+      apiBaseUrl: "${aws_apigatewayv2_api.api.api_endpoint}"
+    };
+  CONFIG
 }
