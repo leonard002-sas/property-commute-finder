@@ -52,6 +52,7 @@ exports.handler = async (event) => {
   const method = event.requestContext?.http?.method || 'GET';
   const path = event.rawPath || '/';
   try {
+    if (method === 'OPTIONS') return { statusCode: 204, headers };
     if (path === '/extract' && method === 'POST') {
       const body = JSON.parse(event.body || '{}');
       return { statusCode: 200, headers, body: JSON.stringify(await extractFromUrl(body.url || '')) };
