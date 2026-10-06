@@ -1,0 +1,8 @@
+config.js
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+.aws/
+node_modules/
+dist/
