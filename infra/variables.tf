@@ -18,3 +18,10 @@ variable "github_branch" {
   type    = string
   default = "main"
 }
+
+variable "google_maps_api_key" {
+  type        = string
+  description = "Browser key restricted to the CloudFront domain. Keep empty until Google Maps is configured."
+  default     = ""
+  sensitive   = true
+}

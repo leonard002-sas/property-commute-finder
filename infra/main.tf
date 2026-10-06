@@ -260,7 +260,8 @@ resource "aws_s3_object" "app_config" {
     window.APP_CONFIG = {
       cognitoDomain: "https://${aws_cognito_user_pool_domain.web.domain}.auth.${var.aws_region}.amazoncognito.com",
       clientId: "${aws_cognito_user_pool_client.web.id}",
-      apiBaseUrl: "${aws_apigatewayv2_api.api.api_endpoint}"
+      apiBaseUrl: "${aws_apigatewayv2_api.api.api_endpoint}",
+      googleMapsApiKey: "${var.google_maps_api_key}"
     };
   CONFIG
 }
