@@ -1,0 +1,17 @@
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo "Preparing deployment"
+  pre_build:
+    commands:
+      - test -f index.html
+      - test -f infra/main.tf
+      - grep -q "住まいと通勤" index.html
+  build:
+    commands:
+      - aws s3 sync . "s3://${SITE_BUCKET}" --delete --exclude ".git/*" --exclude ".github/*" --exclude "infra/*" --exclude "README.md" --exclude "config.example.js" --exclude "buildspec.yml"
+      - aws cloudfront create-invalidation --distribution-id "${DISTRIBUTION_ID}" --paths "/*"
+artifacts:
+  files: []

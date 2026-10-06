@@ -34,11 +34,11 @@ window.APP_CONFIG = {
 
 現在の`index.html`は、AWS接続前でも画面を確認できるデモモードです。接続時は、ブラウザ内保存部分をAPI呼び出しへ置き換えます。
 
-## GitHub Actions
+## CodePipeline
 
-`.github/workflows/deploy.yml`は、`main`へのpushでTerraformを適用し、S3へ静的ファイルを同期する構成です。GitHub Actionsには長期AWSアクセスキーを置かず、AWS IAMのOIDCロールを`AWS_DEPLOY_ROLE_ARN`というSecretで渡します。
+TerraformはGitHub CodeConnections、CodePipeline、CodeBuildを作成します。GitHubの`main`へのpushを受け、HTMLの存在と基本表示文言を検査してからS3へ同期し、CloudFrontのキャッシュを更新します。
 
-初回だけ、Terraform stateを保存する場所とGitHub OIDCのデプロイロールを用意します。そこまでの作業はAWSアカウント固有のため、実デプロイ時にアカウントIDとGitHubリポジトリ名を設定します。
+初回のTerraform適用後、AWSコンソールでGitHub Connectionを一度だけ承認してください。接続承認後は、`main`へのpushごとに自動デプロイされます。
 
 ## 注意
 
