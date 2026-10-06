@@ -25,3 +25,9 @@ variable "google_maps_api_key" {
   default     = ""
   sensitive   = true
 }
+
+variable "google_maps_map_id" {
+  type        = string
+  description = "Google Maps map ID for Advanced Markers. DEMO_MAP_ID is used if this remains empty."
+  default     = ""
+}

@@ -6,7 +6,7 @@ const headers = { 'content-type': 'application/json', 'access-control-allow-orig
 const allowedHosts = ['suumo.jp', 'homes.co.jp', 'chintai.net'];
 
 function text(value = '') {
-  return value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/s+/g, ' ').trim();
+  return value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 }
 
 function firstMatch(source, expression) {
@@ -22,7 +22,7 @@ function extractListing(html, url) {
   const rent = firstMatch(plain, /([0-9]+(?:\.[0-9]+)?\s*万円)/);
   const layout = firstMatch(plain, /\b([1-9][SLDKR]{1,4})\b/i);
   const station = firstMatch(plain, /([^\s、・（）()]{1,20}駅)/);
-  const address = firstMatch(plain, /((?:東京都|北海道|(?:京都|大阪)府|.{2,3}県)[^\s、]{3,60})/);
+  const address = firstMatch(plain, /((?:東京都|北海道|(?:京都|大阪)府|.{2,3}県)[^\s、／/|<>]{3,80})/);
   return {
     name: title.replace(/\s*[｜|].*$/, '').slice(0, 100),
     rent,
@@ -35,7 +35,7 @@ function extractListing(html, url) {
 
 async function extractFromUrl(url) {
   let parsed;
-  try { parsed = new URL(url); } catch { throw new Error('invalid_url'); }
+  try { parsed = new URL(url.trim()); } catch { throw new Error('invalid_url'); }
   if (parsed.protocol !== 'https:' || !allowedHosts.some(host => parsed.hostname === host || parsed.hostname.endsWith('.' + host))) {
     throw new Error('unsupported_site');
   }
