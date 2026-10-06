@@ -93,10 +93,10 @@
           const duration=formatDuration(route.durationMillis||0),distance=formatDistance(route.distanceMeters||0);p.time=duration;render();
           document.getElementById('routeDetails').innerHTML='<strong>'+escapeHtml(p.name)+'</strong><br>'+escapeHtml(origin.label)+' から '+escapeHtml(office)+'<br>距離：<strong>'+distance+'</strong>　所要時間：<strong>'+duration+'</strong>';return;
         }
-        const origins=await resolveTransitPlaceOrigins(p),routeCandidates=[];
+        const origins=await resolveTransitPlaceOrigins(p),destination=await resolveTransitDestination(office),routeCandidates=[];
         for(const origin of origins){
           try{
-            const result=await Route.computeRoutes({origin:origin.place,destination:office,travelMode:'TRANSIT',departureTime:new Date(),computeAlternativeRoutes:true,fields:['durationMillis','distanceMeters','path','viewport','legs','localizedValues']});
+            const result=await Route.computeRoutes({origin:origin.place,destination,travelMode:'TRANSIT',departureTime:new Date(),computeAlternativeRoutes:true,fields:['durationMillis','distanceMeters','path','viewport','legs','localizedValues']});
             for(const route of result.routes||[])routeCandidates.push({route,origin});
           }catch(error){console.warn('Routes API transit failed',origin.query,error)}
         }
@@ -109,6 +109,7 @@
         document.getElementById('routeDetails').innerHTML='<strong>'+escapeHtml(p.name)+'</strong><br>'+escapeHtml(office)+'までの公共交通候補'+details;
       }catch(e){console.error(e);document.getElementById('routeDetails').textContent=e.message==='origin_not_found'?'物件名・住所・最寄り駅のいずれからも位置を見つけられませんでした。':'公共交通の経路取得に失敗しました。Routes APIとPlaces API（新）の設定を確認してください。'}
     }
+    async function resolveTransitDestination(query){const {Place}=await google.maps.importLibrary('places');const result=await Place.searchByText({textQuery:query,fields:['id','location','formattedAddress'],maxResultCount:1,language:'ja',region:'jp'});const place=result.places&&result.places[0];return place&&place.id?new Place({id:place.id}):query}
   </script>
 </body>
 </html>
